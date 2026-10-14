@@ -1,45 +1,51 @@
 // ShortcutManager.swift
 // MarkDisplayApp
 //
-// Registers global NSEvent monitors for keyboard shortcuts that fire
-// even when another application is in the foreground.
+// Registers system-wide hotkeys via Carbon RegisterEventHotKey. Unlike
+// NSEvent global monitors, this needs no Input Monitoring / Accessibility
+// permission and works immediately, including when this app is frontmost.
 //
-// Default shortcuts (all modifier combos — no Accessibility permission needed):
-//   Cmd+Shift+A — toggle annotation mode
-//   Cmd+Shift+X — clear canvas
+// Default shortcuts:
+//   Ctrl+A — toggle annotation mode
+//   Ctrl+X — clear canvas
 
 import AppKit
+import Carbon.HIToolbox
 
 class ShortcutManager {
 
-    private var monitors: [Any] = []
+    private var actions: [UInt32: () -> Void] = [:]
+    private var hotKeys: [EventHotKeyRef] = []
+    private var handler: EventHandlerRef?
+
+    init() {
+        var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+        InstallEventHandler(GetApplicationEventTarget(), { _, event, userData in
+            var id = EventHotKeyID()
+            GetEventParameter(event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID),
+                              nil, MemoryLayout<EventHotKeyID>.size, nil, &id)
+            let me = Unmanaged<ShortcutManager>.fromOpaque(userData!).takeUnretainedValue()
+            me.actions[id.id]?()
+            return noErr
+        }, 1, &spec, Unmanaged.passUnretained(self).toOpaque(), &handler)
+    }
 
     deinit {
-        monitors.forEach { NSEvent.removeMonitor($0) }
+        hotKeys.forEach { UnregisterEventHotKey($0) }
+        if let handler { RemoveEventHandler(handler) }
     }
 
     // MARK: - Registration
 
-    /// Register a global key-down monitor for a modifier + character key.
-    /// A global monitor covers other apps; a local monitor covers our own overlay
-    /// (global monitors never see events delivered to this app).
-    func register(modifiers: NSEvent.ModifierFlags, character: String, action: @escaping () -> Void) {
-        func matches(_ event: NSEvent) -> Bool {
-            event.modifierFlags.intersection(.deviceIndependentFlagsMask) == modifiers
-                && event.charactersIgnoringModifiers?.lowercased() == character.lowercased()
-        }
-        if let global = NSEvent.addGlobalMonitorForEvents(matching: .keyDown, handler: { event in
-            if matches(event) { action() }
-        }) {
-            monitors.append(global)
-        }
-        if let local = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { event in
-            guard matches(event) else { return event }
-            action()
-            return nil
-        }) {
-            monitors.append(local)
-        }
+    func register(keyCode: Int, modifiers: Int, action: @escaping () -> Void) {
+        let id = UInt32(actions.count + 1)
+        var ref: EventHotKeyRef?
+        let status = RegisterEventHotKey(UInt32(keyCode), UInt32(modifiers),
+                                         EventHotKeyID(signature: OSType(0x4D444B59), id: id),
+                                         GetApplicationEventTarget(), 0, &ref)
+        guard status == noErr, let ref else { return }
+        actions[id] = action
+        hotKeys.append(ref)
     }
 
     /// Register all default application shortcuts.
@@ -47,7 +53,7 @@ class ShortcutManager {
         toggleAnnotation: @escaping () -> Void,
         clearCanvas: @escaping () -> Void
     ) {
-        register(modifiers: [.control], character: "a", action: toggleAnnotation)
-        register(modifiers: [.control], character: "x", action: clearCanvas)
+        register(keyCode: kVK_ANSI_A, modifiers: controlKey, action: toggleAnnotation)
+        register(keyCode: kVK_ANSI_X, modifiers: controlKey, action: clearCanvas)
     }
 }

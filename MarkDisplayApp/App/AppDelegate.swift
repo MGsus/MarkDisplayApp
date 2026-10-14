@@ -11,9 +11,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var shortcutManager: ShortcutManager?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Global key monitors silently receive nothing without Input Monitoring access.
-        if !CGPreflightListenEventAccess() { CGRequestListenEventAccess() }
-
         menuBarController = MenuBarController()
 
         let mc = menuBarController!
