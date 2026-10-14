@@ -6,6 +6,29 @@
 	objectVersion = 56;
 	objects = {
 
+/* Begin PBXShellScriptBuildPhase section */
+		AA000001000000000000043 /* Generate App Icons */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/MarkDisplayApp/Resources/AppIcon-master.svg",
+			);
+			name = "Generate App Icons";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/MarkDisplayApp/Resources/Assets.xcassets/AppIcon.appiconset/icon_512x512@2x.png",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"${SRCROOT}/generate-icons.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXBuildFile section */
 		AA000001000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000011; };
 		AA000001000000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000012; };
@@ -170,6 +193,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = AA000001000000000000080;
 			buildPhases = (
+				AA000001000000000000043 /* Generate App Icons */,
 				AA000001000000000000041 /* Sources */,
 				AA000001000000000000040 /* Frameworks */,
 				AA000001000000000000042 /* Resources */,
@@ -382,7 +406,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.markdisplayapp.app";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -407,7 +431,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.markdisplayapp.app";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
