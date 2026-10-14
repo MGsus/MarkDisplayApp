@@ -12,7 +12,7 @@ class PreferencesWindowController: NSWindowController {
 
     init() {
         let win = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 340),
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 360),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -32,7 +32,7 @@ class PreferencesWindowController: NSWindowController {
         contentView.wantsLayer = true
 
         let prefs = AppPreferences.shared
-        var y: CGFloat = 300
+        var y: CGFloat = 320
 
         func label(_ text: String, x: CGFloat) {
             let f = NSTextField(labelWithString: text)
@@ -55,7 +55,7 @@ class PreferencesWindowController: NSWindowController {
         // --- Stroke Width ---
         y -= 50
         label("Stroke Width", x: 20)
-        let slider = NSSlider(value: Double(prefs.strokeWidth), minValue: 1, maxValue: 20,
+        let slider = NSSlider(value: Double(prefs.strokeWidth), minValue: 1, maxValue: 9,
                               target: self, action: #selector(strokeWidthChanged(_:)))
         slider.frame = NSRect(x: 160, y: y, width: 180, height: 24)
         contentView.addSubview(slider)
@@ -79,11 +79,11 @@ class PreferencesWindowController: NSWindowController {
         y -= 50
         label("Shortcuts", x: 20)
         let shortcuts = NSTextField(labelWithString:
-            "⌘⇧A  Toggle annotation\n⌘⇧X  Clear canvas\nP/H/E/S  Tool: pen/highlight/erase/shape\nTab  Cycle tools\n1–5  Colour slot\n⌘Z / ⌘⇧Z  Undo / Redo\nEsc  Stop annotating")
-        shortcuts.frame = NSRect(x: 160, y: y - 72, width: 200, height: 100)
+            "^A  Toggle annotation\n^X  Clear canvas\nF  Pen  H  Highlighter\nE  Eraser\nR  Rectangle  C  Circle\nA  Arrow  Tab  Cycle tools\n[ / ]  Stroke width\n1–5  Colour slot\n⌘Z / ⌘⇧Z  Undo / Redo\nEsc  Stop annotating")
+        shortcuts.frame = NSRect(x: 160, y: y - 100, width: 200, height: 130)
         shortcuts.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
         shortcuts.lineBreakMode = .byWordWrapping
-        shortcuts.maximumNumberOfLines = 8
+        shortcuts.maximumNumberOfLines = 11
         contentView.addSubview(shortcuts)
     }
 

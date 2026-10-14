@@ -48,8 +48,9 @@ class MenuBarController: NSObject {
         let toggle = NSMenuItem(
             title: "Start Annotating",
             action: #selector(toggleAnnotation),
-            keyEquivalent: ""
+            keyEquivalent: "a"
         )
+        toggle.keyEquivalentModifierMask = .control
         toggle.target = self
         menu.addItem(toggle)
         toggleItem = toggle
@@ -60,8 +61,9 @@ class MenuBarController: NSObject {
         let clear = NSMenuItem(
             title: "Clear Canvas",
             action: #selector(clearCanvas),
-            keyEquivalent: ""
+            keyEquivalent: "x"
         )
+        clear.keyEquivalentModifierMask = .control
         clear.target = self
         clear.isEnabled = false
         menu.addItem(clear)
@@ -71,8 +73,9 @@ class MenuBarController: NSObject {
         let undo = NSMenuItem(
             title: "Undo",
             action: #selector(undoAction),
-            keyEquivalent: ""
+            keyEquivalent: "z"
         )
+        undo.keyEquivalentModifierMask = .command
         undo.target = self
         undo.isEnabled = false
         menu.addItem(undo)
@@ -82,8 +85,9 @@ class MenuBarController: NSObject {
         let redo = NSMenuItem(
             title: "Redo",
             action: #selector(redoAction),
-            keyEquivalent: ""
+            keyEquivalent: "z"
         )
+        redo.keyEquivalentModifierMask = [.command, .shift]
         redo.target = self
         redo.isEnabled = false
         menu.addItem(redo)
