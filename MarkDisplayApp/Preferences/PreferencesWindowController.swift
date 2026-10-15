@@ -107,9 +107,47 @@ final class ShortcutKeysView: NSView {
     }
 }
 
+// MARK: - StrokeWidthHintView
+
+/// A row of 9 circles (one per width level 1–9) that visually previews each stroke width.
+/// The active level is filled with the accent colour; the rest are outlined.
+final class StrokeWidthHintView: NSView {
+
+    var selectedLevel: Int = 1 { didSet { needsDisplay = true } }
+
+    private let levels = 9
+    private let maxDiameter: CGFloat = 16   // diameter for level 9
+    private let minDiameter: CGFloat = 2    // diameter for level 1
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        let spacing = bounds.width / CGFloat(levels)
+        for i in 0..<levels {
+            let level   = i + 1
+            let t       = CGFloat(i) / CGFloat(levels - 1)   // 0…1
+            let d       = minDiameter + t * (maxDiameter - minDiameter)
+            let cx      = spacing * CGFloat(i) + spacing / 2
+            let cy      = bounds.midY
+            let rect    = CGRect(x: cx - d / 2, y: cy - d / 2, width: d, height: d)
+            let path    = NSBezierPath(ovalIn: rect)
+
+            if level == selectedLevel {
+                NSColor.controlAccentColor.setFill()
+                path.fill()
+            } else {
+                NSColor.tertiaryLabelColor.setStroke()
+                path.lineWidth = 1
+                path.stroke()
+            }
+        }
+    }
+}
+
 // MARK: - PreferencesWindowController
 
 class PreferencesWindowController: NSWindowController, NSTextFieldDelegate {
+
+    private weak var strokeHintView: StrokeWidthHintView?
 
     // MARK: - Init
 
@@ -160,8 +198,16 @@ class PreferencesWindowController: NSWindowController, NSTextFieldDelegate {
         label("Stroke Width", x: 20)
         let slider = NSSlider(value: Double(prefs.strokeWidth), minValue: 1, maxValue: 9,
                               target: self, action: #selector(strokeWidthChanged(_:)))
+        slider.numberOfTickMarks = 9
+        slider.allowsTickMarkValuesOnly = true
         slider.frame = NSRect(x: 160, y: y, width: 180, height: 24)
         contentView.addSubview(slider)
+
+        let hint = StrokeWidthHintView(frame: NSRect(x: 160, y: y - 24, width: 180, height: 22))
+        hint.selectedLevel = Int(prefs.strokeWidth)
+        contentView.addSubview(hint)
+        strokeHintView = hint
+        y -= 24   // account for hint row so the next section clears it
 
         // --- Auto-Erase ---
         y -= 44
@@ -242,7 +288,9 @@ class PreferencesWindowController: NSWindowController, NSTextFieldDelegate {
     }
 
     @objc private func strokeWidthChanged(_ sender: NSSlider) {
-        AppPreferences.shared.strokeWidth = CGFloat(sender.doubleValue)
+        let v = Int(sender.doubleValue.rounded())
+        AppPreferences.shared.strokeWidth = CGFloat(v)
+        strokeHintView?.selectedLevel = v
     }
 
     @objc private func autoEraseToggled(_ sender: NSButton) {
