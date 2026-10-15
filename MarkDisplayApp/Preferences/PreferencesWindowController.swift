@@ -13,7 +13,7 @@ enum ShortcutKey {
     case ctrl           // ⌃  (SF: control)
     case cmd            // ⌘  (SF: command)
     case shift          // ⇧  (SF: shift)
-    case char(String)   // literal key label, e.g. "A", "Tab", "Esc", "[", "]"
+    case char(String)   // literal key label, e.g. "A", "Esc", "[", "]"
     case separator      // "/" divider between alternatives
 }
 
@@ -192,7 +192,6 @@ class PreferencesWindowController: NSWindowController, NSTextFieldDelegate {
             ([.char("R")],                         "Rectangle shape"),
             ([.char("C")],                         "Circle shape"),
             ([.char("A")],                         "Arrow shape"),
-            ([.char("Tab")],                       "Cycle tools"),
             ([.char("["), .separator, .char("]")], "Stroke width"),
             ([.char("1"), .separator, .char("5")], "Colour slot"),
             ([.cmd, .char("Z")],                   "Undo"),
@@ -218,6 +217,20 @@ class PreferencesWindowController: NSWindowController, NSTextFieldDelegate {
         // Pin all subviews to the top edge: when the window grows downward
         // the extra space accumulates at the bottom, not between controls.
         contentView.subviews.forEach { $0.autoresizingMask = .minYMargin }
+
+        // Resize grip indicator — bottom-right corner, stays there as window grows.
+        let gripSize: CGFloat = 16
+        let grip = NSImageView(frame: NSRect(
+            x: contentView.bounds.maxX - gripSize - 4,
+            y: 4,
+            width: gripSize,
+            height: gripSize
+        ))
+        grip.image = NSImage(systemSymbolName: "arrow.up.left.and.arrow.down.right",
+                             accessibilityDescription: "Resizable")
+        grip.contentTintColor = .tertiaryLabelColor
+        grip.autoresizingMask = [.minXMargin]   // sticks to bottom-right; Y stays at 4
+        contentView.addSubview(grip)
     }
 
     // MARK: - Actions
