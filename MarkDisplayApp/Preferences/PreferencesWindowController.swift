@@ -6,13 +6,116 @@
 
 import AppKit
 
-class PreferencesWindowController: NSWindowController {
+// MARK: - Shortcut key model
+
+/// One token in a shortcut badge row.
+enum ShortcutKey {
+    case ctrl           // ⌃  (SF: control)
+    case cmd            // ⌘  (SF: command)
+    case shift          // ⇧  (SF: shift)
+    case char(String)   // literal key label, e.g. "A", "Tab", "Esc", "[", "]"
+    case separator      // "/" divider between alternatives
+}
+
+// MARK: - ShortcutKeysView
+
+/// Renders a row of key-cap badges + modifier SF Symbol glyphs inline.
+final class ShortcutKeysView: NSView {
+
+    private let keys: [ShortcutKey]
+
+    init(keys: [ShortcutKey]) {
+        self.keys = keys
+        super.init(frame: .zero)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+
+        let capFont   = NSFont.systemFont(ofSize: 11, weight: .medium)
+        let symConfig = NSImage.SymbolConfiguration(pointSize: 11, weight: .regular)
+        let fg        = NSColor.labelColor
+
+        var x: CGFloat = 0
+        let h: CGFloat = bounds.height
+
+        for key in keys {
+            switch key {
+
+            case .ctrl:
+                x += drawSymbol("control", config: symConfig, color: fg, x: x, h: h)
+            case .cmd:
+                x += drawSymbol("command", config: symConfig, color: fg, x: x, h: h)
+            case .shift:
+                x += drawSymbol("shift", config: symConfig, color: fg, x: x, h: h)
+
+            case .char(let label):
+                x += drawKeyCap(label, font: capFont, color: fg, x: x, h: h)
+
+            case .separator:
+                let attr: [NSAttributedString.Key: Any] = [
+                    .font: capFont, .foregroundColor: NSColor.tertiaryLabelColor
+                ]
+                let s = NSAttributedString(string: "/", attributes: attr)
+                let sz = s.size()
+                s.draw(at: NSPoint(x: x + 2, y: (h - sz.height) / 2))
+                x += sz.width + 4
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    /// Draws an SF Symbol glyph, returns width consumed.
+    private func drawSymbol(_ name: String,
+                            config: NSImage.SymbolConfiguration,
+                            color: NSColor,
+                            x: CGFloat, h: CGFloat) -> CGFloat {
+        guard let img = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+                            .withSymbolConfiguration(config) else { return 0 }
+        let sz = img.size
+        let y  = (h - sz.height) / 2
+        img.draw(in: NSRect(x: x, y: y, width: sz.width, height: sz.height),
+                 from: .zero, operation: .sourceOver, fraction: 1,
+                 respectFlipped: true, hints: nil)
+        return sz.width + 2
+    }
+
+    /// Draws a rounded-rect key-cap badge with the label centred inside, returns width consumed.
+    private func drawKeyCap(_ label: String, font: NSFont, color: NSColor,
+                            x: CGFloat, h: CGFloat) -> CGFloat {
+        let attr: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
+        let s  = NSAttributedString(string: label, attributes: attr)
+        let sz = s.size()
+        let hPad: CGFloat = 5
+        let capW  = sz.width + hPad * 2
+        let capH  = h - 2
+        let capY  = (h - capH) / 2
+
+        let cap = NSRect(x: x, y: capY, width: capW, height: capH)
+        let path = NSBezierPath(roundedRect: cap, xRadius: 3, yRadius: 3)
+
+        NSColor.quaternaryLabelColor.withAlphaComponent(0.25).setFill()
+        path.fill()
+        NSColor.separatorColor.setStroke()
+        path.lineWidth = 0.5
+        path.stroke()
+
+        s.draw(at: NSPoint(x: x + hPad, y: (h - sz.height) / 2))
+        return capW + 3
+    }
+}
+
+// MARK: - PreferencesWindowController
+
+class PreferencesWindowController: NSWindowController, NSTextFieldDelegate {
 
     // MARK: - Init
 
     init() {
         let win = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 360),
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 420),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -32,7 +135,7 @@ class PreferencesWindowController: NSWindowController {
         contentView.wantsLayer = true
 
         let prefs = AppPreferences.shared
-        var y: CGFloat = 320
+        var y: CGFloat = 380
 
         func label(_ text: String, x: CGFloat) {
             let f = NSTextField(labelWithString: text)
@@ -72,19 +175,45 @@ class PreferencesWindowController: NSWindowController {
         delayField.stringValue = "\(Int(prefs.autoEraseDelay))s"
         delayField.target = self
         delayField.action = #selector(autoEraseDelayChanged(_:))
+        delayField.delegate = self
         delayField.placeholderString = "5s"
         contentView.addSubview(delayField)
 
         // --- Shortcuts reference ---
-        y -= 50
+        y -= 44
         label("Shortcuts", x: 20)
-        let shortcuts = NSTextField(labelWithString:
-            "^A  Toggle annotation\n^X  Clear canvas\nF  Pen  H  Highlighter\nE  Eraser\nR  Rectangle  C  Circle\nA  Arrow  Tab  Cycle tools\n[ / ]  Stroke width\n1–5  Colour slot\n⌘Z / ⌘⇧Z  Undo / Redo\nEsc  Stop annotating")
-        shortcuts.frame = NSRect(x: 160, y: y - 100, width: 200, height: 130)
-        shortcuts.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
-        shortcuts.lineBreakMode = .byWordWrapping
-        shortcuts.maximumNumberOfLines = 11
-        contentView.addSubview(shortcuts)
+
+        let shortcutRows: [(keys: [ShortcutKey], description: String)] = [
+            ([.ctrl, .char("A")],                  "Toggle annotation"),
+            ([.ctrl, .char("X")],                  "Clear canvas"),
+            ([.char("F")],                         "Pen"),
+            ([.char("H")],                         "Highlighter"),
+            ([.char("E")],                         "Eraser"),
+            ([.char("R")],                         "Rectangle shape"),
+            ([.char("C")],                         "Circle shape"),
+            ([.char("A")],                         "Arrow shape"),
+            ([.char("Tab")],                       "Cycle tools"),
+            ([.char("["), .separator, .char("]")], "Stroke width"),
+            ([.char("1"), .separator, .char("5")], "Colour slot"),
+            ([.cmd, .char("Z")],                   "Undo"),
+            ([.cmd, .shift, .char("Z")],            "Redo"),
+            ([.char("Esc")],                       "Stop annotating"),
+        ]
+
+        let rowH: CGFloat = 22
+        let gridTop = y - 4
+        for (i, row) in shortcutRows.enumerated() {
+            let rowY = gridTop - CGFloat(i) * rowH
+            let keysView = ShortcutKeysView(keys: row.keys)
+            keysView.frame = NSRect(x: 160, y: rowY, width: 120, height: rowH - 2)
+            contentView.addSubview(keysView)
+
+            let desc = NSTextField(labelWithString: row.description)
+            desc.frame = NSRect(x: 290, y: rowY + 1, width: 120, height: rowH - 2)
+            desc.font = .systemFont(ofSize: 11)
+            desc.textColor = .secondaryLabelColor
+            contentView.addSubview(desc)
+        }
     }
 
     // MARK: - Actions
@@ -108,5 +237,10 @@ class PreferencesWindowController: NSWindowController {
         if let v = TimeInterval(text), v > 0 {
             AppPreferences.shared.autoEraseDelay = v
         }
+    }
+
+    func controlTextDidEndEditing(_ obj: Notification) {
+        guard let field = obj.object as? NSTextField else { return }
+        autoEraseDelayChanged(field)
     }
 }
