@@ -116,7 +116,7 @@ class PreferencesWindowController: NSWindowController, NSTextFieldDelegate {
     init() {
         let win = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 420, height: 420),
-            styleMask: [.titled, .closable],
+            styleMask: [.titled, .closable, .resizable],
             backing: .buffered,
             defer: false
         )
