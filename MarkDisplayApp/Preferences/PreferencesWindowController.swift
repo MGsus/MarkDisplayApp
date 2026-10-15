@@ -214,6 +214,10 @@ class PreferencesWindowController: NSWindowController, NSTextFieldDelegate {
             desc.textColor = .secondaryLabelColor
             contentView.addSubview(desc)
         }
+
+        // Pin all subviews to the top edge: when the window grows downward
+        // the extra space accumulates at the bottom, not between controls.
+        contentView.subviews.forEach { $0.autoresizingMask = .minYMargin }
     }
 
     // MARK: - Actions
